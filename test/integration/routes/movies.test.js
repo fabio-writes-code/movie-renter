@@ -18,7 +18,7 @@ describe('api/movies', () => {
 
         movie1 = new Movie({
             title:'movie1',
-            genre: genre,
+            genre: genre, 
             numberInStock:10,
             dailyRentalRate:2
         });
@@ -76,13 +76,13 @@ describe('api/movies', () => {
             return await request(server)
                 .post('/api/movies')
                 .set('x-auth-token',token)
-                .send({title, genre, numberInStock,dailyRentalRate})
+                .send({title, numberInStock, genreId,dailyRentalRate})
         }
 
         beforeEach(()=>{
             token=new User().generateAuthToken()
             title='MoviePost'
-            genre= {name:'genre1'}
+            genreId= genre._id
             numberInStock=10
             dailyRentalRate=2
         })
@@ -94,19 +94,130 @@ describe('api/movies', () => {
         });
 
         it('should return 400 on data input error', async () => {
-            genre='invalid'
+            genreId='invalid'
             const res=await exec()
             expect(res.status).toBe(400)
         });
 
-        // it('should return 200 on valid input', async () => {
-        //     // genre._id=mongoose.Types.ObjectId()
-        //     const res=await exec()
-        //     expect(res.status).toBe(200)
-        //     // expect(res.body).toHaveProperty('title','MoviePost')
-        // });
+        it('should return 404 if genre does not exists', async () => {
+            genreId=mongoose.Types.ObjectId()
+            const res=await exec()
+            expect(res.status).toBe(404)
+        });
+
+        it('should return 200 on valid input and return object', async () => {
+            const res=await exec()
+            expect(res.status).toBe(200)
+            expect(res.body).toHaveProperty('title',title)
+        });
+
+        it('should save on succesful input', async () => {
+            await exec()
+            const movieInDB= await Movie.find({title:'MoviePost'})
+            expect(movieInDB).not.toBe(null)
+        });
     });
     
+    describe('PUT', () => {
+        let title, id
+
+        const exec=async ()=>{
+            return await request(server)
+                .put('/api/movies/'+id)
+                .set('x-auth-token',token)
+                .send({title, genreId, numberInStock, dailyRentalRate})
+        }
+
+        beforeEach(()=>{
+            title='NewTitle'
+            id=movie1._id;
+            genreId=genre._id
+            numberInStock=10
+            dailyRentalRate=2
+        })
+
+        it('should return 401 on invalid auth', async () => {
+            token=''
+            const res=await exec()
+            expect(res.status).toBe(401)
+        });
+        it('should return 400 on invalid input', async () => {
+            title=''            
+            const res=await exec()
+            expect(res.status).toBe(400)
+        });
+
+        it('should return 400 on invalid genre id', async () => {
+            genreId=123
+            const res=await exec()
+            expect(res.status).toBe(400)
+        });
+
+        it('should return 404 if no genre', async () => {
+            genreId=mongoose.Types.ObjectId()
+            const res=await exec()
+            expect(res.status).toBe(404)
+        });
+
+        it('should return 404 if movie does not exists', async () => {
+            id=mongoose.Types.ObjectId();
+            const res = await exec()
+            expect(res.status).toBe(404)
+        });
+
+        it('should return 200 on valid update and return object', async () => {
+            const res=await exec()
+            expect(res.status).toBe(200)
+            expect(res.body).toHaveProperty('title',title)
+        });
+
+        it('should save on valid input', async () => {
+            title='NewTitle'
+            id=movie1._id
+            await exec()
+            const movieInDB= await Movie.findById(id)            
+            expect(movieInDB.title).toBe('NewTitle')
+        });
+    });
+
+    describe('DELETE', () => {
+        let title, id
+
+        const exec=async ()=>{
+            return await request(server)
+                .delete('/api/movies/'+id)
+                .set('x-auth-token',token)
+                .send()
+        }
+
+        beforeEach(()=>{
+            id=movie1._id;
+        })
+
+        it('should return 401 on invalid auth', async () => {
+            token=''
+            const res=await exec()
+            expect(res.status).toBe(401)
+        });
+
+        it('should return 404 if movie does not exists', async () => {
+            id=mongoose.Types.ObjectId();
+            const res = await exec()
+            expect(res.status).toBe(404)
+        });
+
+        it('should return 200 on valid input and return object', async () => {
+            const res=await exec()
+            expect(res.status).toBe(200)
+            expect(res.body).toHaveProperty('title',movie1.title)
+        });
+
+        it('should delete on valid input', async () => {
+            await exec()
+            const movieInDB= await Movie.findById(id)            
+            expect(movieInDB).toBeNull()
+        });
+    });
 
 
 });
