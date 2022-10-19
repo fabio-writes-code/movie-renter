@@ -4,9 +4,12 @@ const mongoose = require("mongoose");
 const { Movie } = require("../models/movies");
 const { Customer } = require("../models/customer");
 const { Rental, validate } = require("../models/rentals");
+const auth = require("../middleware/auth");
+const validateObjectId = require("../middleware/validateObjectId");
+const admin = require("../middleware/admin");
 
 // GET
-router.get("/", (req, res) => {
+router.get("/",auth, (req, res) => {
     const p = new Promise((resolve, reject) => {
         const rental = Rental.find().sort("-dateOut").select();
         resolve(rental);
@@ -14,7 +17,7 @@ router.get("/", (req, res) => {
     p.then((resolve) => res.send(resolve));
 });
 
-router.get("/:id", async (req, res) => {
+router.get("/:id",[auth,validateObjectId], async (req, res) => {
     const rental = await Rental.findById(req.params.id);
     !rental
         ? res.status(404).send("Customer does not exist")
@@ -22,15 +25,15 @@ router.get("/:id", async (req, res) => {
 });
 
 // POST
-router.post("/", async (req, res) => {
+router.post("/",auth, async (req, res) => {
     const { error } = validate(req.body);
     if (error) return res.status(400).send(error.details[0].message);
 
     // *Check customer and genre's id, and if movie in stock
     const movie = await Movie.findById(req.body.movieId);
-    if (!movie) return res.status(400).send("Movie title does not exists");
+    if (!movie) return res.status(404).send("Movie title does not exists");
     const customer = await Customer.findById(req.body.customerId);
-    if (!customer) return res.status(400).send("Customer does not exists");
+    if (!customer) return res.status(404).send("Customer does not exists");
     if (movie.numberInStock === 0)
         return res.status(400).send("Movie not in stock");
 
@@ -54,11 +57,18 @@ router.post("/", async (req, res) => {
     await movie.save((err) => {
         if (err) {
             errRemoveRental(rental);
-            return res.status(400).send("Internal Server Error");
+            return res.status(403).send("Internal Server Error");
         }
         return res.status(200).send(rental);
     });
 });
+
+//DELETE, admin only
+router.delete('/:id',[auth,admin,validateObjectId],async(req,res)=>{
+    const rental=await Rental.findByIdAndRemove(req.params.id)
+    if(!rental) return res.status(404).send('Rental not in database')
+    res.send(rental)
+})
 
 async function errRemoveRental(rental) {
     await Rental.findByIdAndDelete(rental._id);
