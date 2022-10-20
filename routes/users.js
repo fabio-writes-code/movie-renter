@@ -5,10 +5,12 @@ const {User,validate}=require('../models/users');
 const _=require('lodash')
 const bcrypt=require('bcrypt');
 const { route } = require('./rentals');
-const auth=require('../middleware/auth')
+const auth=require('../middleware/auth');
+const admin = require('../middleware/admin');
+const validateObjectId = require('../middleware/validateObjectId');
 
 // GET
-router.get('/',(req,res)=>{
+router.get('/', [auth, admin] ,(req,res)=>{
     const p = new Promise((resolve,reject)=>{
         const user=User
             .find()
@@ -23,13 +25,13 @@ router.get('/me',auth, async(req,res)=>{
     res.send(user)
 })
 
-router.get('/:id', async (req,res)=>{
+router.get('/:id',[auth,admin, validateObjectId], async (req,res)=>{
     const user=await User.findById(req.params.id)
     !user? res.status(404).send('User does not exist'):res.send(user)
 })
 
 // POST
-router.post('/', async (req,res)=>{
+router.post('/',[auth, admin], async (req,res)=>{
     const { error } =validate(req.body)
     if (error) return res.status(400).send(error.details[0].message)
 
@@ -52,4 +54,29 @@ router.post('/', async (req,res)=>{
     res.header('x-auth-token',token).send(_.pick(user,['_id','name','email']))
 })
 
+//PUT
+router.put('/:id',[validateObjectId,auth,admin],async (req,res)=>{
+    const {error}=validate(req.body)
+    if (error) return res.status(400).send(error.details[0].message)
+
+    const salt=await bcrypt.genSalt(10)
+
+    const user= await User.findByIdAndUpdate(req.params.id,{
+        name:req.body.name,
+        email:req.body.email,
+        password:await bcrypt.hash(req.body.password,salt)
+    },{new:true}
+    )
+
+    if(!user) return res.status(404).send('User not found')
+    res.send(user)
+
+})
+
+//DELETE
+router.delete('/:id',[validateObjectId,auth,admin],async (req,res)=>{
+    const user=await User.findByIdAndRemove(req.params.id)
+    if (!user) return res.status(404).send('User does not exists')
+    res.send(user)
+})
 module.exports=router;

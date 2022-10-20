@@ -151,24 +151,12 @@ describe('/api/rentals', () => {
             expect(res.status).toBe(400)
         });
 
-        // it('should return 400 on internal server error', async () => {
-        //     const err=jest.fn().mockRejectedValue(new Error('Internal Server Error'))
-        //     await err()
-        //     const res=await exec()
-        //     expect(res.status).toBe(403)
-        // });
-
         it('should return 200 on valid input and return object', async () => {
             const res=await exec()
             expect(res.status).toBe(200)
             expect(res.body).toHaveProperty('movie.title', movie.title)
         });
 
-        // it('should save on succesful input', async () => {
-        //     await exec()
-        //     const movieInDB= await Movie.find({title:'MoviePost'})
-        //     expect(movieInDB).not.toBe(null)
-        // });
     });
 
     describe('DELETE', () => {
