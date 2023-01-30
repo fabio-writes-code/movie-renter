@@ -1,0 +1,10 @@
+node_modules/
+coverage/
+logfile.log
+exception.log
+rejection.log
+logfile.log
+seed.js
+package.json
+cd
+.gitignore
