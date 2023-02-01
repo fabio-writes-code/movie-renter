@@ -5,6 +5,7 @@ const { Movie, validate } = require('../models/movies');
 const { Genre } = require('../models/genres'); //* importing validate from genre
 const validateObjectId = require('../middleware/validateObjectId');
 const auth = require('../middleware/auth');
+const admin = require('../middleware/admin')
 
 //* Route movie related requests from client. Handles express routes
 
